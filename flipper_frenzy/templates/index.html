@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Flipper Frenzy</title>
+</head>
+<body>
+    {% if message %}
+        <h1>{{ message }}</h1>
+    {% endif %}
+    <h1>Let's Rock!</h1>
+    <h2>Active Matches:</h2>
+        <ul>
+            {% for match in matches %}
+                <li>
+                    {% if not match.winner %}
+                        <a href="{{ url_for('match_winner', match_id=match.id, player_name=match.player_a) }}">{{ match.player_a }}</a> vs
+                        <a href="{{ url_for('match_winner', match_id=match.id, player_name=match.player_b) }}">{{ match.player_b }}</a> on
+                        {{ match.machine_name }}
+                    {% else %}
+                        {{ match.player_a }} vs {{ match.player_b }} on {{ match.machine_name }}
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    <h2>Players:</h2>
+        <ul>
+            {% for player in players %}
+                <li>{{ player.name }} || {{ player.num_wins }} / {{ player.num_played }}</li>
+            {% endfor %}
+        </ul>
+    <h2>Machines:</h2>
+        <ul>
+            {% for machine in machines %}
+                <li>{{ machine.name }}</li>
+            {% endfor %}
+        </ul>
+
+    <a href="{{ url_for('next_match') }}">Next match!</a>
+
+    <form action="add-player" method="post">
+        Player: <input name="name" placeholder="Name"/> <button type="submit">Add Player</button>
+    </form>
+
+    <form action="add-machine" method="post">
+        Machine: <input name="name" placeholder="Name"/> <button type="submit">Add Machine</button>
+    </form>
+
+</body>
+</html>
