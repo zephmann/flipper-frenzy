@@ -107,9 +107,6 @@ class Match:
 
 class Tournament:
     def __init__(self):
-        self._restart()
-
-    def _restart(self):
         self._avail_players = []
         self._players = {}
 
@@ -123,6 +120,15 @@ class Tournament:
         self._avail_players.append(player)
         self._players[name] = player
 
+    def remove_player(self, name):
+        if name not in self._players:
+            return f"Unable to find player '{name}'"
+        if self._players[name].active:
+            return f"Player is currently in a match!"
+        player = self._players.pop(name)
+        self._avail_players.remove(player)
+        return f"Removed player '{name}'"
+
     def add_machine(self, name):
         """Add a new machine to the tournament."""
         machine_id = len(self._machines)
@@ -131,6 +137,20 @@ class Tournament:
 
         for player in self._players.values():
             player.machines.add(machine)
+
+    def remove_machine(self, name):
+        # todo replace with map?
+        for machine in self._machines:
+            if machine.name == name:
+                break
+        else:
+            return f"Unable to find machine '{name}'"
+        self._machines.remove(machine)
+        for player in self._players.values():
+            if machine in player.machines:
+                player.machines.remove(machine)
+
+        return f"Removed machine '{name}'"
 
     def next_match(self):
         """Determine the next match, consisting of two players and a machine.

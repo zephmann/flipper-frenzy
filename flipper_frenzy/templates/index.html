@@ -5,11 +5,18 @@
     <title>Flipper Frenzy</title>
 </head>
 <body>
+    <div id="Title">
+        <h1>Let's Rock!</h1>
+    </div>
+
     {% if message %}
-        <h1>{{ message }}</h1>
+        <div id="status">
+            <h2>{{ message }}</h2>
+        </div>
     {% endif %}
-    <h1>Let's Rock!</h1>
-    <h2>Active Matches:</h2>
+
+    <div id="matches">
+        <h2>Active Matches:</h2>
         <ul>
             {% for match in matches %}
                 <li>
@@ -23,18 +30,25 @@
                 </li>
             {% endfor %}
         </ul>
-    <h2>Players:</h2>
+    </div>
+
+    <div id="players">
+        <h2>Players:</h2>
         <ul>
             {% for player in players %}
                 <li>{{ player.name }} || {{ player.num_wins }} / {{ player.num_played }}</li>
             {% endfor %}
         </ul>
-    <h2>Machines:</h2>
+    </div>
+
+    <div id="machines">
+        <h2>Machines:</h2>
         <ul>
             {% for machine in machines %}
                 <li>{{ machine.name }}</li>
             {% endfor %}
         </ul>
+    </div>
 
     <a href="{{ url_for('next_match') }}">Next match!</a>
 
