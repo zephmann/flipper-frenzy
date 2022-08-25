@@ -1,11 +1,16 @@
 import itertools
 
+# TODO reset tournament button?
+# TODO reset scores button?
+# TODO manually enter match?
+
 
 class Machine:
     def __init__(self, machine_id, name):
         self.id = machine_id
         self.name = name
         self.active = False
+        self.played = False
 
     def __repr__(self):
         return f"<Machine {self.name} ({'X' if self.active else 'O'})>"
@@ -14,6 +19,7 @@ class Machine:
         return {
             "name": self.name,
             "active": self.active,
+            "played": self.played,
         }
 
 
@@ -53,6 +59,7 @@ class Match:
         self.machine = machine
         self.winner = winner
 
+        machine.played = True
         if winner is None:
             player_a.active = True
             player_b.active = True
@@ -92,19 +99,6 @@ class Match:
         self.machine.active = False
 
 
-# TODO flask app
-#   todo display state
-#       todo index.html
-#       todo add player form
-#       todo add machine form
-#   todo delete player
-#   todo delete machine
-#   todo restart tournament
-#   todo next match button
-#   todo complete match buttons
-
-
-
 class Tournament:
     def __init__(self):
         self._avail_players = []
@@ -123,8 +117,8 @@ class Tournament:
     def remove_player(self, name):
         if name not in self._players:
             return f"Unable to find player '{name}'"
-        if self._players[name].active:
-            return f"Player is currently in a match!"
+        if self._players[name].active or self._players[name].num_played:
+            return f"Player has already started!"
         player = self._players.pop(name)
         self._avail_players.remove(player)
         return f"Removed player '{name}'"
@@ -145,6 +139,8 @@ class Tournament:
                 break
         else:
             return f"Unable to find machine '{name}'"
+        if machine.played:
+            return f"Machine has already been played!"
         self._machines.remove(machine)
         for player in self._players.values():
             if machine in player.machines:
@@ -160,35 +156,26 @@ class Tournament:
         been waiting longer.
         """
         if len(self._avail_players) < 2:
-            print("Not enough players!")
             return "Not enough players!"
 
         # check each player in the queue
         for player_a, player_b in itertools.combinations(self._avail_players, 2):
-            print(f"Player A: {player_a.name}")
-            print(f"  Player B: {player_b.name}")
             # check if players have already played one another
             if player_b in player_a.opponents:
-                print("    Already played each other!")
                 continue
 
             # check if the players have a machine in common
             common_machines = player_a.machines.intersection(player_b.machines)
             if not common_machines:
-                print("    Players have no machines in common!")
                 continue
 
             for machine in common_machines:
-                print(f"    Machine: {machine}")
                 if machine.active:
-                    print("      Machine is in use!")
                     continue
 
                 match_id = len(self._matches)
                 match = Match(match_id, player_a, player_b, machine)
                 self._matches.append(match)
-
-                print(f"\nFound a match! {match}")
 
                 self._avail_players.remove(player_a)
                 self._avail_players.remove(player_b)
@@ -196,10 +183,8 @@ class Tournament:
                 player_b.machines.remove(machine)
                 player_a.opponents.add(player_b)
                 player_b.opponents.add(player_a)
-                print("Match created!")
                 return "Match created!"
 
-        print("Unable to find another match!")
         return "Unable to find another match!"
 
     def complete_match(self, match_id, winner_name):

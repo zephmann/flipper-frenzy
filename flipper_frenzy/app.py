@@ -9,7 +9,6 @@ app.secret_key = "give the golden goose a gander"
 @app.route("/")
 def index():
     message = session.pop("message", None)
-    print(f"Message '{message}'")
     t = flipper_frenzy.main.Tournament()
     data = session.get("tournament")
     if data is not None:

@@ -2,63 +2,203 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Flipper Frenzy</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap" rel="stylesheet">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <style>
+        #main {
+            max-width: 800px;
+            background: #bbf;
+            padding: 2em;
+            margin: 2em auto 0;
+            border-radius: 2em;
+        }
+
+        #title > h1 {
+            margin: 0;
+            text-align: center;
+            font-family: 'Dancing Script', cursive;
+            font-size: 3em;
+        }
+
+        h2 {
+            font-family: 'Dancing Script', cursive;
+            font-size: 2em;
+        }
+
+        #next-match-btn {
+            background: yellow;
+            padding: 1em;
+            display: inline-block;
+            border-radius: 999px;
+            margin: 0 auto;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .container {
+            background: white;
+            border-radius: 2em;
+            padding: 1em;
+            margin: 1em 0;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        #players > ul {
+            columns: 3;
+            -webkit-columns: 3;
+            -moz-columns: 3;
+        }
+
+        #machines > ul {
+            columns: 2;
+            -webkit-columns: 2;
+            -moz-columns: 2;
+        }
+
+        .ready {
+            font-weight: bold;
+            color: #0a0;
+        }
+
+        .in-match {
+            font-weight: 100;
+            color: #999;
+        }
+
+        .winner {
+            background: #0d0;
+            display: inline-block;
+            padding: 0.5em;
+            border-radius: 1em;
+            text-decoration: none;
+            border: 1px solid solid;
+        }
+
+        #copyright {
+            text-align: center;
+            margin: 1.5em auto 0.5em;
+        }
+        #copyright > p {
+            margin: 0;
+        }
+
+        #status {
+            background: white;
+            text-align: center;
+            border-radius: 5em;
+            font-size: 1.5em;
+            font-style: italic;
+        }
+
+        @media screen and (max-width: 768px) {
+            #main {
+                margin: 0.5em;
+                border-radius: 2em;
+            }
+
+            input {
+                font-size: 2em;
+                width: 60%;
+            }
+
+            button {
+                font-size: 2em;
+            }
+
+            #next-match-btn {
+                font-size: 2em;
+                padding: 0.5em;
+            }
+
+            li {
+                font-size: 1.25em;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div id="Title">
-        <h1>Let's Rock!</h1>
-    </div>
-
-    {% if message %}
-        <div id="status">
-            <h2>{{ message }}</h2>
+    <div id="main">
+        <div id="title">
+            <h1>Flipper Frenzy!</h1>
         </div>
-    {% endif %}
 
-    <div id="matches">
-        <h2>Active Matches:</h2>
-        <ul>
-            {% for match in matches %}
-                <li>
-                    {% if not match.winner %}
-                        <a href="{{ url_for('match_winner', match_id=match.id, player_name=match.player_a) }}">{{ match.player_a }}</a> vs
-                        <a href="{{ url_for('match_winner', match_id=match.id, player_name=match.player_b) }}">{{ match.player_b }}</a> on
-                        {{ match.machine_name }}
-                    {% else %}
-                        {{ match.player_a }} vs {{ match.player_b }} on {{ match.machine_name }}
-                    {% endif %}
-                </li>
-            {% endfor %}
-        </ul>
+        {% if message %}
+            <div id="status">
+                <h3>{{ message }}</h3>
+            </div>
+        {% endif %}
+
+        <div id="matches" class="container">
+            <h2>Matches:</h2>
+            <ul>
+                {% for match in matches %}
+                    <li>
+                        {% if not match.winner %}
+                            <a class="winner" href="{{ url_for('match_winner', match_id=match.id, player_name=match.player_a) }}">{{ match.player_a }}</a> v
+                            <a class="winner" href="{{ url_for('match_winner', match_id=match.id, player_name=match.player_b) }}">{{ match.player_b }}</a>
+                            <br/>on {{ match.machine_name }}
+                        {% elif match.winner == match.player_a %}
+                            <span class="ready">{{ match.player_a }}</span> vs <span class="in-match">{{ match.player_b }}</span> on {{ match.machine_name }}
+                        {% else %}
+                            <span class="in-match">{{ match.player_a }}</span> vs <span class="ready">{{ match.player_b }}</span> on {{ match.machine_name }}
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+            <a href="{{ url_for('next_match') }}" id="next-match-btn">
+                <div>Next match!</div>
+            </a>
+        </div>
+
+        <div id="players" class="container">
+            <h2>Players:</h2>
+            <ul>
+                {% for player in players %}
+                    <li class="{{ 'in-match' if player.active else 'ready' }}">{{ player.name }}</li>
+                {% endfor %}
+                {% for player in players %}
+                    <li>{{ player.num_wins }} / {{ player.num_played }}</li>
+                {% endfor %}
+                {% for player in players %}
+                    <li><a href="{{ url_for('remove_player', player_name=player.name) }}"><i class="fa fa-trash"></i></a></li>
+                {% endfor %}
+            </ul>
+            <form action="add-player" method="post">
+                <input name="name" placeholder="Name"/> <button type="submit">Add</button>
+            </form>
+        </div>
+
+        <div id="machines" class="container">
+            <h2>Machines:</h2>
+            <ul>
+                {% for machine in machines %}
+                    <li class="{{ 'in-match' if machine.active else 'ready' }}">{{ machine.name }}</li>
+                {% endfor %}
+                {% for machine in machines %}
+                    <li><a href="{{ url_for('remove_machine', machine_name=machine.name) }}"><i class="fa fa-trash"></i></a></li>
+                {% endfor %}
+            </ul>
+            <form action="add-machine" method="post">
+                <input name="name" placeholder="Name"/> <button type="submit">Add</button>
+            </form>
+        </div>
+
     </div>
 
-    <div id="players">
-        <h2>Players:</h2>
-        <ul>
-            {% for player in players %}
-                <li>{{ player.name }} || {{ player.num_wins }} / {{ player.num_played }}</li>
-            {% endfor %}
-        </ul>
-    </div>
-
-    <div id="machines">
-        <h2>Machines:</h2>
-        <ul>
-            {% for machine in machines %}
-                <li>{{ machine.name }}</li>
-            {% endfor %}
-        </ul>
-    </div>
-
-    <a href="{{ url_for('next_match') }}">Next match!</a>
-
-    <form action="add-player" method="post">
-        Player: <input name="name" placeholder="Name"/> <button type="submit">Add Player</button>
-    </form>
-
-    <form action="add-machine" method="post">
-        Machine: <input name="name" placeholder="Name"/> <button type="submit">Add Machine</button>
-    </form>
+    <div id="copyright"><p>Copyright Zertle 2022</p></div>
 
 </body>
 </html>
