@@ -1,1 +1,1 @@
-web: gunicorn app:app
+web: gunicorn flipper_frenzy.app:app
