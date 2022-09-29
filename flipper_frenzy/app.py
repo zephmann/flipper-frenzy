@@ -1,3 +1,6 @@
+
+import json
+
 from flask import Flask, request, session, render_template, redirect, url_for
 
 import flipper_frenzy.main
@@ -14,7 +17,20 @@ def index():
     if data is not None:
         t.restore(data)
     session["tournament"] = t.serialize()
+    print(t._avail_players)
     return render_template("index.html", message=message, **t.serialize())
+
+
+@app.route("/player/<player_name>")
+def player_detail(player_name):
+    t = flipper_frenzy.main.Tournament()
+    data = session.get("tournament")
+    if data is None:
+        session["message"] = "No tournament data found in current session!"
+        return redirect(url_for("index"))
+    t.restore(data)
+    player_data = t.get_player_data(player_name)
+    return render_template("player.html", **player_data)
 
 
 @app.route("/add-player", methods=["POST"])
@@ -32,13 +48,14 @@ def add_player():
     return redirect(url_for("index"))
 
 
-@app.route("/remove-player/<player_name>", methods=["GET"])
-def remove_player(player_name):
-    # player_name = request.args.get("name")
+@app.route("/enable-player/", methods=["GET"])
+def enable_player():
+    player_name = request.args.get("player_name")
+    enable = request.args.get("enable") == "True"
     data = session["tournament"]
     t = flipper_frenzy.main.Tournament()
     t.restore(data)
-    session["message"] = t.remove_player(player_name)
+    session["message"] = t.enable_player(player_name, enable)
     session["tournament"] = t.serialize()
     return redirect(url_for("index"))
 
@@ -58,12 +75,25 @@ def add_machine():
     return redirect(url_for("index"))
 
 
-@app.route("/remove-machine/<machine_name>", methods=["GET"])
-def remove_machine(machine_name):
+@app.route("/remove-machine/", methods=["GET"])
+def enable_machine():
+    machine_name = request.args.get("machine_name")
+    enable = request.args.get("enable") == "True"
     data = session["tournament"]
     t = flipper_frenzy.main.Tournament()
     t.restore(data)
-    session["message"] = t.remove_machine(machine_name)
+    session["message"] = t.enable_machine(machine_name, enable)
+    session["tournament"] = t.serialize()
+    return redirect(url_for("index"))
+
+
+@app.route("/sort/", methods=["GET"])
+def sort_by():
+    by_rank = request.args.get("by_rank") == "True"
+    data = session["tournament"]
+    t = flipper_frenzy.main.Tournament()
+    t.restore(data)
+    t.sort_by(by_rank)
     session["tournament"] = t.serialize()
     return redirect(url_for("index"))
 
@@ -74,6 +104,17 @@ def next_match():
     t = flipper_frenzy.main.Tournament()
     t.restore(data)
     session["message"] = t.next_match()
+    session["tournament"] = t.serialize()
+    return redirect(url_for("index"))
+
+
+@app.route("/shuffle", methods=["GET", "POST"])
+def shuffle():
+    data = session["tournament"]
+    t = flipper_frenzy.main.Tournament()
+    t.restore(data)
+    t.shuffle()
+    session["message"] = "Queue shuffled!"
     session["tournament"] = t.serialize()
     return redirect(url_for("index"))
 
@@ -90,10 +131,32 @@ def match_winner():
 
 
 # TODO revert back to post only
-@app.route("/reset", methods=["GET", "POST"])
-def reset():
+@app.route("/reset-all", methods=["GET", "POST"])
+def reset_all():
     session.pop("tournament", None)
+    session["message"] = "All data cleared!"
+    return redirect(url_for("index"))
+
+
+# TODO revert back to post only
+@app.route("/reset-tournament", methods=["GET", "POST"])
+def reset_tournament():
+    data = session["tournament"]
+    del data["avail_players"]
+    del data["players"]
+    del data["matches"]
+    t = flipper_frenzy.main.Tournament()
+    t.restore(data)
     session["message"] = "Tournament reset!"
+    return redirect(url_for("index"))
+
+
+@app.route("/debug")
+def debug():
+    data = session["tournament"]
+    t = flipper_frenzy.main.Tournament()
+    t.restore(data)
+    print(json.dumps(t.serialize(), indent=2))
     return redirect(url_for("index"))
 
 

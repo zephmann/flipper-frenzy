@@ -1,16 +1,20 @@
 import itertools
+import random
 
+# TODO reset scores button
+# TODO remove active player
+# TODO remove active machine
+# TODO remove match?
+# TODO confirmation pop-ups
 # TODO reset tournament button?
-# TODO reset scores button?
 # TODO manually enter match?
 
 
 class Machine:
-    def __init__(self, machine_id, name):
-        self.id = machine_id
+    def __init__(self, name, enabled):
         self.name = name
         self.active = False
-        self.played = False
+        self.enabled = enabled
 
     def __repr__(self):
         return f"<Machine {self.name} ({'X' if self.active else 'O'})>"
@@ -19,35 +23,50 @@ class Machine:
         return {
             "name": self.name,
             "active": self.active,
-            "played": self.played,
+            "enabled": self.enabled,
         }
 
 
 class Player:
     def __init__(
-        self, name, machines, num_wins=0, num_played=0
+        self, name, machines, num_wins=0, num_losses=0, num_played=0, enabled=True,
     ):
         self.name = name
         self.num_wins = num_wins
+        self.num_losses = num_losses
         self.num_played = num_played
         self.active = False
+        self.enabled = enabled
         self.opponents = set()  # other players already faced
         self.machines = machines  # machines still to play
+        self._ratio = 0
+        self.calc_ratio()
+
+    def calc_ratio(self):
+        if self.num_played:
+            self._ratio = round(float(self.num_wins) / self.num_played, 2)
 
     def __repr__(self):
         return (
-            f"<Player {self.name} {self.num_wins} / {self.num_played} "
+            f"<Player {self.name} {self.num_wins} / {self.num_losses} "
             f"({'X' if self.active else 'O'})>"
         )
+
+    @property
+    def ratio(self):
+        return self._ratio
 
     def serialize(self):
         return {
             "name": self.name,
             "active": self.active,
             "num_wins": self.num_wins,
+            "num_losses": self.num_losses,
             "num_played": self.num_played,
             "opponents": [o.name for o in self.opponents],
-            "machines": [m.id for m in self.machines],
+            "machines": [m.name for m in self.machines],
+            "enabled": self.enabled,
+            "ratio": self._ratio,
         }
 
 
@@ -59,7 +78,6 @@ class Match:
         self.machine = machine
         self.winner = winner
 
-        machine.played = True
         if winner is None:
             player_a.active = True
             player_b.active = True
@@ -79,74 +97,115 @@ class Match:
             "id": self.id,
             "player_a": self.player_a.name,
             "player_b": self.player_b.name,
-            "machine_id": self.machine.id,
             "machine_name": self.machine.name,
             "winner": winner_name,
         }
 
     def set_winner(self, winner):
         assert self.winner is None
-
         self.winner = winner
-        winner.num_wins += 1
+
+        if winner == self.player_a:
+            self.player_a.num_wins += 1
+            self.player_b.num_losses += 1
+        else:
+            self.player_b.num_wins += 1
+            self.player_a.num_losses += 1
 
         self.player_a.active = False
         self.player_a.num_played += 1
+        self.player_a.calc_ratio()
 
         self.player_b.active = False
         self.player_b.num_played += 1
+        self.player_b.calc_ratio()
 
         self.machine.active = False
 
 
 class Tournament:
     def __init__(self):
-        self._avail_players = []
         self._players = {}
+        self._avail_players = []
 
-        self._machines = []
+        self._machines = {}
+        self._enabled_machines = set()
 
         self._matches = []
 
+        self._sort_by_rank = True
+
+    def sort_by(self, by_rank=True):
+        self._sort_by_rank = by_rank
+
     def add_player(self, name):
-        assert name not in self._players
-        player = Player(name, set(self._machines))
-        self._avail_players.append(player)
+        name = name.strip()
+        if name in self._players:
+            return f"Player '{name}' already exists!"
+
+        player = Player(name, set(self._enabled_machines))
+
         self._players[name] = player
+        self._avail_players.append(player)
 
-    def remove_player(self, name):
-        if name not in self._players:
-            return f"Unable to find player '{name}'"
-        if self._players[name].active or self._players[name].num_played:
-            return f"Player has already started!"
-        player = self._players.pop(name)
-        self._avail_players.remove(player)
-        return f"Removed player '{name}'"
+        return f"Added new player '{name}'"
 
-    def add_machine(self, name):
+    def enable_player(self, name, enable):
+        name = name.strip()
+        player = self._players.get(name)
+        if player is None:
+            return f"Player '{name}' doesn't exist!"
+
+        player.enabled = enable
+        if enable:
+            if player not in self._avail_players:
+                self._avail_players.append(player)
+        else:
+            if player in self._avail_players:
+                self._avail_players.remove(player)
+
+        return f"Updated player '{name}' to {enable}"
+
+    def add_machine(self, name, enabled=True):
         """Add a new machine to the tournament."""
-        machine_id = len(self._machines)
-        machine = Machine(machine_id, name)
-        self._machines.append(machine)
+        name = name.strip()
+        if name in self._machines:
+            return f"Machine '{name}' already exists!"
+
+        machine = Machine(name, enabled)
+        self._machines[name] = machine
+        self._enabled_machines.add(machine)
 
         for player in self._players.values():
             player.machines.add(machine)
 
-    def remove_machine(self, name):
-        # todo replace with map?
-        for machine in self._machines:
-            if machine.name == name:
-                break
-        else:
-            return f"Unable to find machine '{name}'"
-        if machine.played:
-            return f"Machine has already been played!"
-        self._machines.remove(machine)
-        for player in self._players.values():
-            if machine in player.machines:
-                player.machines.remove(machine)
+    def enable_machine(self, name, enable):
+        name = name.strip()
+        machine = self._machines.get(name)
+        if machine is None:
+            return f"Machine '{name}' doesn't exist!"
 
-        return f"Removed machine '{name}'"
+        machine.enabled = enable
+        if enable:
+            self._enabled_machines.add(machine)
+        else:
+            self._enabled_machines.remove(machine)
+
+    def add_machine_to_player(self, player_name, machine_name):
+        machine_name = machine_name.strip()
+        machine = self._machines.get(machine_name)
+        if machine is None:
+            return f"Machine '{machine_name}' doesn't exist!"
+
+        player_name = player_name.strip()
+        player = self._players.get(player_name)
+        if player is None:
+            return f"Player '{player_name}' doesn't exist!"
+
+        player.machines.add(machine)
+
+    def shuffle(self):
+        random.shuffle(self._avail_players)
 
     def next_match(self):
         """Determine the next match, consisting of two players and a machine.
@@ -164,13 +223,21 @@ class Tournament:
             if player_b in player_a.opponents:
                 continue
 
+            if not player_a.enabled:
+                self._avail_players.remove(player_a)
+                continue
+
+            if not player_b.enabled:
+                self._avail_players.remove(player_b)
+                continue
+
             # check if the players have a machine in common
             common_machines = player_a.machines.intersection(player_b.machines)
             if not common_machines:
                 continue
 
             for machine in common_machines:
-                if machine.active:
+                if machine.active or not machine.enabled:
                     continue
 
                 match_id = len(self._matches)
@@ -194,17 +261,21 @@ class Tournament:
 
         num_players = len(self._players)
 
+        # re-add the two players to the queue
         self._avail_players.append(match.player_a)
+        self._avail_players.append(match.player_b)
+
+        # if the players have faced all other opponents, then reset their opponents lists
         if (len(match.player_a.opponents) + 1) == num_players:
             match.player_a.opponents = set()
-        if not match.player_a.machines:
-            match.player_a.machines = set(self._machines)
-
-        self._avail_players.append(match.player_b)
         if (len(match.player_b.opponents) + 1) == num_players:
             match.player_b.opponents = set()
-        if not match.player_b.machines:
-            match.player_b.machines = set(self._machines)
+
+        # if the players have played all machines then reset their machines
+        if not any(machine.enabled for machine in match.player_a.machines):
+            match.player_a.machines = self._enabled_machines
+        if not any(machine.enabled for machine in match.player_b.machines):
+            match.player_b.machines = self._enabled_machines
 
     def print_state(self):
         print("Active Matches:")
@@ -220,28 +291,101 @@ class Tournament:
 
         print("")
         print("Machines:")
-        for machine in self._machines:
+        for machine in self._machines.values():
             print(machine)
 
-    def serialize(self):
+    def get_player_data(self, player_name):
+        # TODO handle player not available
+        player = self._players[player_name]
+
+        # get opponent data
+        players = list(self._players.values())
+        players.sort(key=lambda p: p.name)
+        opponents = []
+        for opponent in players:
+            if opponent == player or not opponent.enabled:
+                continue
+
+            faced = opponent in player.opponents
+            opponent = opponent.serialize()
+            opponent["faced"] = faced
+            opponents.append(opponent)
+
+        # get played machines list
+        machines = list(self._machines.values())
+        machines.sort(key=lambda m: m.name)
+        played_machines = []
+        for machine in machines:
+            if not machine.enabled:
+                continue
+
+            played = machine not in player.machines
+            machine = machine.serialize()
+            machine["played"] = played
+            played_machines.append(machine)
+
+        # get played matches
+        matches = []
+        for match in self._matches:
+            if match.player_a != player and match.player_b != player:
+                continue
+            won = match.winner == player
+            swap = match.player_a != player
+            match = match.serialize()
+            match["won"] = won
+            if swap:
+                match["player_a"], match["player_b"] = match["player_b"], match["player_a"]
+            matches.append(match)
+
         return {
-            "machines": [machine.serialize() for machine in self._machines],
+            "player": player.serialize(),
+            "machines": played_machines,
+            "opponents": opponents,
+            "matches": matches,
+        }
+
+    def serialize(self):
+        # sort the players
+        players = list(self._players.values())
+        if self._sort_by_rank:
+            players.sort(key=lambda p: (-p.enabled, -p.ratio, p.num_played, p.name))
+        else:
+            len_avail_players = len(self._avail_players)
+            players.sort(key=lambda p: (
+                self._avail_players.index(p) if p in self._avail_players else len_avail_players,
+                -p.enabled,
+                p.name
+            ))
+
+        # sort the machines
+        machines = list(self._machines.values())
+        machines.sort(key=lambda m: (-m.enabled, m.active, m.name))
+
+        return {
+            "machines": [machine.serialize() for machine in machines],
             "avail_players": [player.name for player in self._avail_players],
-            "players": [player.serialize() for player in self._players.values()],
+            "players": [player.serialize() for player in players],
             "matches": [match.serialize() for match in self._matches],
+            "sort_by_rank": self._sort_by_rank,
         }
 
     def restore(self, data):
+        self.sort_by(data["sort_by_rank"])
+
         # restore machine objects
-        for machine in data["machines"]:
-            self.add_machine(machine["name"])
+        for machine_data in data["machines"]:
+            self.add_machine(
+                machine_data["name"], enabled=machine_data["enabled"]
+            )
 
         # restore player objects
-        for player_data in data["players"]:
+        for player_data in data.get("players", []):
             player = Player(
                 player_data["name"], set(),
                 num_wins=player_data["num_wins"],
+                num_losses=player_data["num_losses"],
                 num_played=player_data["num_played"],
+                enabled=player_data["enabled"],
             )
             self._players[player.name] = player
 
@@ -255,14 +399,14 @@ class Tournament:
                 player.machines.add(self._machines[machine_id])
 
         # rebuild available players queue
-        for player_name in data["avail_players"]:
+        for player_name in data.get("avail_players", []):
             self._avail_players.append(self._players[player_name])
 
         # restore matches. if winner is not None, it will reset the active flags
-        for match_id, match_data in enumerate(data["matches"]):
+        for match_id, match_data in enumerate(data.get("matches", [])):
             player_a = self._players[match_data["player_a"]]
             player_b = self._players[match_data["player_b"]]
-            machine = self._machines[match_data["machine_id"]]
+            machine = self._machines[match_data["machine_name"]]
             winner_name = match_data["winner"]
             winner = self._players.get(winner_name)
             match = Match(match_id, player_a, player_b, machine, winner=winner)

@@ -13,128 +13,14 @@
     <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
-    <style>
-        #main {
-            max-width: 800px;
-            background: #bbf;
-            padding: 2em;
-            margin: 2em auto 0;
-            border-radius: 2em;
-        }
-
-        #title > h1 {
-            margin: 0;
-            text-align: center;
-            font-family: 'Dancing Script', cursive;
-            font-size: 3em;
-        }
-
-        h2 {
-            font-family: 'Dancing Script', cursive;
-            font-size: 2em;
-        }
-
-        #next-match-btn {
-            background: yellow;
-            padding: 1em;
-            display: inline-block;
-            border-radius: 999px;
-            margin: 0 auto;
-            text-align: center;
-            text-decoration: none;
-        }
-
-        .container {
-            background: white;
-            border-radius: 2em;
-            padding: 1em;
-            margin: 1em 0;
-        }
-
-        ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        #players > ul {
-            columns: 3;
-            -webkit-columns: 3;
-            -moz-columns: 3;
-        }
-
-        #machines > ul {
-            columns: 2;
-            -webkit-columns: 2;
-            -moz-columns: 2;
-        }
-
-        .ready {
-            font-weight: bold;
-            color: #0a0;
-        }
-
-        .in-match {
-            font-weight: 100;
-            color: #999;
-        }
-
-        .winner {
-            background: #0d0;
-            display: inline-block;
-            padding: 0.5em;
-            border-radius: 1em;
-            text-decoration: none;
-            border: 1px solid solid;
-        }
-
-        #copyright {
-            text-align: center;
-            margin: 1.5em auto 0.5em;
-        }
-        #copyright > p {
-            margin: 0;
-        }
-
-        #status {
-            background: white;
-            text-align: center;
-            border-radius: 5em;
-            font-size: 1.5em;
-            font-style: italic;
-        }
-
-        @media screen and (max-width: 768px) {
-            #main {
-                margin: 0.5em;
-                border-radius: 2em;
-            }
-
-            input {
-                font-size: 2em;
-                width: 60%;
-            }
-
-            button {
-                font-size: 2em;
-            }
-
-            #next-match-btn {
-                font-size: 2em;
-                padding: 0.5em;
-            }
-
-            li {
-                font-size: 1.25em;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
+    <div id="title">
+        <h1>Flipper Frenzy!</h1>
+    </div>
     <div id="main">
-        <div id="title">
-            <h1>Flipper Frenzy!</h1>
-        </div>
-
+        <h2>Tournament!</h2>
         {% if message %}
             <div id="status">
                 <h3>{{ message }}</h3>
@@ -145,11 +31,11 @@
             <h2>Matches:</h2>
             <ul>
                 {% for match in matches %}
-                    <li>
+                    <li class="match">
                         {% if not match.winner %}
-                            <a class="winner" href="{{ url_for('match_winner', match_id=match.id, player_name=match.player_a) }}">{{ match.player_a }}</a> v
+                            <a class="winner" href="{{ url_for('match_winner', match_id=match.id, player_name=match.player_a) }}">{{ match.player_a }}</a> vs
                             <a class="winner" href="{{ url_for('match_winner', match_id=match.id, player_name=match.player_b) }}">{{ match.player_b }}</a>
-                            <br/>on {{ match.machine_name }}
+                            on {{ match.machine_name }}
                         {% elif match.winner == match.player_a %}
                             <span class="ready">{{ match.player_a }}</span> vs <span class="in-match">{{ match.player_b }}</span> on {{ match.machine_name }}
                         {% else %}
@@ -158,22 +44,49 @@
                     </li>
                 {% endfor %}
             </ul>
-            <a href="{{ url_for('next_match') }}" id="next-match-btn">
+            <a href="{{ url_for('next_match') }}" id="next-match-btn" class="btn">
                 <div>Next match!</div>
             </a>
         </div>
 
         <div id="players" class="container">
             <h2>Players:</h2>
+
+            {% if sort_by_rank %}
+                <h4>Sort by: <a href="{{ url_for('sort_by', by_rank=False) }}">Queue</a> <strong>Ranking</strong></h4>
+            {% else %}
+                <h4>Sort by: <strong>Queue</strong> <a href="{{ url_for('sort_by', by_rank=True) }}">Ranking</a></h4>
+            {% endif %}
+
+            <a href="{{ url_for('shuffle') }}" class="btn">
+                <div>Shuffle Queue</div>
+            </a>
+
             <ul>
                 {% for player in players %}
-                    <li class="{{ 'in-match' if player.active else 'ready' }}">{{ player.name }}</li>
+                    {% if not player.enabled %}
+                            <li class="faced">
+                                <a href="{{ url_for('player_detail', player_name=player.name) }}">{{ player.name }}</a>
+                            </li>
+                        {% elif player.active %}
+                            <li class="in-match">
+                                <a href="{{ url_for('player_detail', player_name=player.name) }}">{{ player.name }}</a>
+                            </li>
+                        {% else %}
+                            <li class="ready">
+                                <a href="{{ url_for('player_detail', player_name=player.name) }}">{{ player.name }}</a>
+                            </li>
+                        {% endif %}
                 {% endfor %}
                 {% for player in players %}
-                    <li>{{ player.num_wins }} / {{ player.num_played }}</li>
+                    <li>{{ player.num_wins }} / {{ player.num_losses }} ({{ player.ratio }})</li>
                 {% endfor %}
                 {% for player in players %}
-                    <li><a href="{{ url_for('remove_player', player_name=player.name) }}"><i class="fa fa-trash"></i></a></li>
+                    {% if player.enabled %}
+                        <li><a href="{{ url_for('enable_player', player_name=player.name, enable=False) }}"><i class="fa fa-times-circle"></i></a></li>
+                    {% else %}
+                        <li><a href="{{ url_for('enable_player', player_name=player.name, enable=True) }}"><i class="fa fa-check-circle"></i></a></li>
+                    {% endif %}
                 {% endfor %}
             </ul>
             <form action="add-player" method="post">
@@ -185,16 +98,29 @@
             <h2>Machines:</h2>
             <ul>
                 {% for machine in machines %}
-                    <li class="{{ 'in-match' if machine.active else 'ready' }}">{{ machine.name }}</li>
+                    {% if machine.active %}
+                        <li class="in-match">{{ machine.name }}</li>
+                    {% elif machine.enabled %}
+                        <li class="ready">{{ machine.name }}</li>
+                    {% else %}
+                        <li class="faced">{{ machine.name }}</li>
+                    {% endif %}
                 {% endfor %}
                 {% for machine in machines %}
-                    <li><a href="{{ url_for('remove_machine', machine_name=machine.name) }}"><i class="fa fa-trash"></i></a></li>
+                    {% if machine.enabled %}
+                        <li><a href="{{ url_for('enable_machine', machine_name=machine.name, enable=False) }}"><i class="fa fa-times-circle"></i></a></li>
+                    {% else %}
+                        <li><a href="{{ url_for('enable_machine', machine_name=machine.name, enable=True) }}"><i class="fa fa-check-circle"></i></a></li>
+                    {% endif %}
                 {% endfor %}
             </ul>
             <form action="add-machine" method="post">
                 <input name="name" placeholder="Name"/> <button type="submit">Add</button>
             </form>
         </div>
+
+        <a href="{{ url_for('reset_tournament') }}">Reset Tournament</a><br/>
+        <a href="{{ url_for('reset_all') }}">Clear Everything</a>
 
     </div>
 

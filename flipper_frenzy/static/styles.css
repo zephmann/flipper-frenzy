@@ -1,0 +1,133 @@
+#main {
+    max-width: 800px;
+    background: #bbf;
+    padding: 2em;
+    margin: 0 auto;
+    border-radius: 2em;
+}
+
+#title h1 {
+    margin: 0.25em 0;
+    text-align: center;
+    font-family: 'Dancing Script', cursive;
+    font-size: 3em;
+}
+
+h2 {
+    font-family: 'Dancing Script', cursive;
+    font-size: 2em;
+}
+
+.btn {
+    background: yellow;
+    padding: 1em;
+    display: inline-block;
+    border-radius: 999px;
+    margin: 0 auto;
+    text-align: center;
+    text-decoration: none;
+}
+
+.faced {
+    text-decoration: line-through;
+}
+
+.container {
+    background: white;
+    border-radius: 2em;
+    padding: 1em;
+    margin: 1em 0;
+}
+
+ul {
+    list-style: none;
+    padding: 0;
+}
+
+#players > ul {
+    columns: 3;
+    -webkit-columns: 3;
+    -moz-columns: 3;
+}
+
+#machines > ul {
+    columns: 2;
+    -webkit-columns: 2;
+    -moz-columns: 2;
+}
+
+.match {
+    margin: 5px 0;
+}
+
+.disabled {
+    font-style: italic;
+    color: #f88;
+}
+
+.loss {
+    color: #f88;
+}
+
+.win {
+    color: #0a0;
+}
+
+.ready {
+    font-weight: bold;
+    color: #0a0;
+}
+
+.in-match {
+    font-weight: 100;
+    color: #999;
+}
+
+.winner {
+    background: #0d0;
+    display: inline-block;
+    padding: 0.5em;
+    border-radius: 1em;
+    border: 1px solid solid;
+}
+
+#copyright {
+    text-align: center;
+    margin: 1.5em auto 0.5em;
+}
+#copyright > p {
+    margin: 0;
+}
+
+#status {
+    background: white;
+    text-align: center;
+    border-radius: 5em;
+    font-size: 1.5em;
+    font-style: italic;
+}
+
+@media screen and (max-width: 768px) {
+    #main {
+        margin: 0.5em;
+        border-radius: 2em;
+    }
+
+    input {
+        font-size: 2em;
+        width: 60%;
+    }
+
+    button {
+        font-size: 2em;
+    }
+
+    #next-match-btn {
+        font-size: 2em;
+        padding: 0.5em;
+    }
+
+    li {
+        font-size: 1.25em;
+    }
+}

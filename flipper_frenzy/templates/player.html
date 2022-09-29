@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flipper Frenzy</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap" rel="stylesheet">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div id="title">
+        <a href="{{ url_for('index') }}"><h1>Flipper Frenzy!</h1></a>
+    </div>
+    <div id="main">
+        <h2>{{ player.name }}</h2>
+        {% if message %}
+            <div id="status">
+                <h3>{{ message }}</h3>
+            </div>
+        {% endif %}
+
+        <div id="matches" class="container">
+            <h2>Matches:</h2>
+            <ul>
+                {% for match in matches %}
+                    <li>
+                        {% if not match.winner %}
+                            <i class="fa fa-info-circle"></i> <strong>{{ match.player_a }} vs {{ match.player_b }} on {{ match.machine_name }}</strong>
+                        {% elif match.won %}
+                            <i class="fa fa-check-circle win"></i> <span class="ready">{{ match.player_a }}</span> vs <span class="in-match">{{ match.player_b }}</span> on {{ match.machine_name }}
+                        {% else %}
+                            <i class="fa fa-times-circle loss"></i> <span class="in-match">{{ match.player_a }}</span> vs <span class="ready">{{ match.player_b }}</span> on {{ match.machine_name }}
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="container">
+            <h2>Opponents:</h2>
+            <ul>
+                {% for opponent in opponents %}
+                    {% if opponent.faced %}
+                        <li class="faced">{{ opponent.name }}</li>
+                    {% else %}
+                        <li class="ready">{{ opponent.name }}</li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="container">
+            <h2>Machines:</h2>
+            <ul>
+                {% for machine in machines %}
+                    {% if machine.played %}
+                        <li class="faced">{{ machine.name }}</li>
+                    {% elif machine.active %}
+                        <li class="in-match">{{ machine.name }}</li>
+                    {% else %}
+                        <li class="ready">{{ machine.name }}</li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </div>
+
+    </div>
+
+    <div id="copyright"><p>Copyright Zertle 2022</p></div>
+
+</body>
+</html>
