@@ -153,10 +153,28 @@ def reset_tournament():
 
 @app.route("/debug")
 def debug():
-    data = session["tournament"]
     t = flipper_frenzy.main.Tournament()
-    t.restore(data)
-    print(json.dumps(t.serialize(), indent=2))
+    data = session.get("tournament")
+    if data is not None:
+        t.restore(data)
+    message = session.pop("message", None)
+    data = json.dumps(t.serialize(), indent=2)
+    return render_template("debug.html", data=data, message=message)
+
+
+@app.route("/debug-update", methods=["POST"])
+def debug_post():
+    data = request.form.get("data")
+    t = flipper_frenzy.main.Tournament()
+    try:
+        data = json.loads(data)
+        t.restore(data)
+    except:
+        session["message"] = "Could not decode JSON data!"
+        return redirect(url_for("debug"))
+
+    session["tournament"] = t.serialize()
+    session["message"] = "Tournament data updated!"
     return redirect(url_for("index"))
 
 

@@ -85,8 +85,8 @@ class Match:
 
     def __repr__(self):
         return (
-            f"<Match {self.player_a.name} v {self.player_b.name} "
-            f"on {self.machine.name}>"
+            f"{self.player_a.name} v {self.player_b.name} "
+            f"on {self.machine.name}"
         )
 
     def serialize(self):
@@ -215,7 +215,7 @@ class Tournament:
         been waiting longer.
         """
         if len(self._avail_players) < 2:
-            return "Not enough players!"
+            return "Unable to find another match!"
 
         # check each player in the queue
         for player_a, player_b in itertools.combinations(self._avail_players, 2):
@@ -242,7 +242,7 @@ class Tournament:
 
                 match_id = len(self._matches)
                 match = Match(match_id, player_a, player_b, machine)
-                self._matches.append(match)
+                self._matches.insert(0, match)
 
                 self._avail_players.remove(player_a)
                 self._avail_players.remove(player_b)
@@ -250,7 +250,7 @@ class Tournament:
                 player_b.machines.remove(machine)
                 player_a.opponents.add(player_b)
                 player_b.opponents.add(player_a)
-                return "Match created!"
+                return str(match)
 
         return "Unable to find another match!"
 
