@@ -1,3 +1,4 @@
+import copy
 import itertools
 import random
 
@@ -127,6 +128,7 @@ class Tournament:
     def __init__(self):
         self._players = {}
         self._avail_players = []
+        self._enabled_players = set()
 
         self._machines = {}
         self._enabled_machines = set()
@@ -147,6 +149,7 @@ class Tournament:
 
         self._players[name] = player
         self._avail_players.append(player)
+        self._enabled_players.add(player)
 
         return f"Added new player '{name}'"
 
@@ -158,9 +161,12 @@ class Tournament:
 
         player.enabled = enable
         if enable:
+            self._enabled_players.add(player)
             if player not in self._avail_players:
                 self._avail_players.append(player)
         else:
+            if player in self._enabled_players:
+                self._enabled_players.remove(player)
             if player in self._avail_players:
                 self._avail_players.remove(player)
 
@@ -207,7 +213,7 @@ class Tournament:
     def shuffle(self):
         random.shuffle(self._avail_players)
 
-    def next_match(self):
+    def next_match(self, check_machines=True):
         """Determine the next match, consisting of two players and a machine.
 
         Prioritize players earlier in the queue rather than trying to maximize
@@ -215,14 +221,10 @@ class Tournament:
         been waiting longer.
         """
         if len(self._avail_players) < 2:
-            return "Unable to find another match!"
+            return "Unable to find another match! Not enough available players."
 
         # check each player in the queue
         for player_a, player_b in itertools.combinations(self._avail_players, 2):
-            # check if players have already played one another
-            if player_b in player_a.opponents:
-                continue
-
             if not player_a.enabled:
                 self._avail_players.remove(player_a)
                 continue
@@ -231,13 +233,28 @@ class Tournament:
                 self._avail_players.remove(player_b)
                 continue
 
+            # check if players have already played one another
+            if player_b in player_a.opponents:
+                continue
+
+            if player_a in player_b.opponents:
+                continue
+
             # check if the players have a machine in common
-            common_machines = player_a.machines.intersection(player_b.machines)
+            if check_machines:
+                common_machines = player_a.machines.intersection(player_b.machines)
+            else:
+                common_machines = player_a.machines
             if not common_machines:
                 continue
 
             for machine in common_machines:
-                if machine.active or not machine.enabled:
+                if machine.active:
+                    continue
+                if not machine.enabled:
+                    player_a.machines.remove(machine)
+                    if machine in player_b.machines:
+                        player_b.machines.remove(machine)
                     continue
 
                 match_id = len(self._matches)
@@ -247,28 +264,37 @@ class Tournament:
                 self._avail_players.remove(player_a)
                 self._avail_players.remove(player_b)
                 player_a.machines.remove(machine)
-                player_b.machines.remove(machine)
+                if machine in player_b.machines:
+                    player_b.machines.remove(machine)
                 player_a.opponents.add(player_b)
                 player_b.opponents.add(player_a)
                 return str(match)
 
-        return "Unable to find another match!"
+        # if we checked all possible combos but couldn't find a match and all
+        # enabled players are in the queue, then it's possible we're stuck
+        # due to players not having an intersection of unplayed machines.
+        # so if the number of available players is equal to the number of enabled
+        # players, then try finding a match again, using only player a's
+        # unplayed machines.
+        if check_machines and set(self._avail_players) == self._enabled_players:
+            return self.next_match(check_machines=False)
+
+        return "Unable to find another match! No valid match-ups found."
 
     def complete_match(self, match_id, winner_name):
         match = self._matches[match_id]
         winner = self._players[winner_name]
         match.set_winner(winner)
 
-        num_players = len(self._players)
-
         # re-add the two players to the queue
         self._avail_players.append(match.player_a)
         self._avail_players.append(match.player_b)
 
-        # if the players have faced all other opponents, then reset their opponents lists
-        if (len(match.player_a.opponents) + 1) == num_players:
+        # if the players have faced all other opponents,
+        # then reset their opponents lists
+        if self._enabled_players.difference(match.player_a.opponents) == {match.player_a}:
             match.player_a.opponents = set()
-        if (len(match.player_b.opponents) + 1) == num_players:
+        if self._enabled_players.difference(match.player_b.opponents) == {match.player_b}:
             match.player_b.opponents = set()
 
         # if the players have played all machines then reset their machines
@@ -388,6 +414,8 @@ class Tournament:
                 enabled=player_data["enabled"],
             )
             self._players[player.name] = player
+            if player_data["enabled"]:
+                self._enabled_players.add(player)
 
             for opponent_name in player_data["opponents"]:
                 opponent = self._players.get(opponent_name)
@@ -416,5 +444,3 @@ class Tournament:
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     pass
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
